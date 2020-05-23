@@ -39,6 +39,7 @@ class SyncService
      * @param  string          $bigQueryTableName     Table Name
      * @param  bool            $createTable           If BigQuery table doesn't exists, create
      * @param  bool            $deleteTable           If BigQuery table exists, delete and recreate
+     * @param  bool            $autoUpdateSchema      If Mysql table schema change, apply changes to BQ schema too
      * @param  string          $orderColumn           Column to sort and compare result sets
      * @param  array           $ignoreColumns         Ignore columns from syncing
      * @param  OutputInterface $output                Output
@@ -49,6 +50,7 @@ class SyncService
         string $bigQueryTableName,
         bool $createTable,
         bool $deleteTable,
+        bool $autoUpdateSchema,
         $orderColumn,
         array $ignoreColumns,
         OutputInterface $output
@@ -136,7 +138,8 @@ class SyncService
                 $ignoreColumns,
                 $offset,
                 $maxRowsPerBatch,
-                $bigQueryMaxColumnValue
+                $bigQueryMaxColumnValue,
+                $autoUpdateSchema
             );
             $progress->advance();
         }
@@ -153,6 +156,7 @@ class SyncService
      * @param  array  $ignoreColumns         Ignore columns from syncing
      * @param  int    $offset                Initial MySQL rows offset
      * @param  int    $limit                 MySQL rows limit, per batch
+     * @param  bool   $autoUpdateSchema      Auto update BQ schema if there's change.
      */
     protected function sendBatch(
         string $databaseName,
@@ -162,11 +166,13 @@ class SyncService
         array $ignoreColumns,
         int $offset,
         int $limit,
-        $orderColumnOffset
+        $orderColumnOffset,
+        bool $autoUpdateSchema
     ) {
         $mysqlConnection = $this->mysql->getConnection($databaseName);
         $mysqlPlatform = $mysqlConnection->getDatabasePlatform();
         $mysqlTableColumns = $this->mysql->getTableColumns($databaseName, $tableName);
+        $bqColumns = $this->bigQuery->getBQColumns($mysqlTableColumns);
 
         $jsonFilePath = ((isset($_ENV['CACHE_DIR'])) ? $_ENV['CACHE_DIR'] : __DIR__ . '/../../cache/') . $tableName;
 
@@ -232,7 +238,9 @@ class SyncService
         }
 
         // Send JSON to BigQuery
-        $job = $this->bigQuery->loadFromJson($json, $bigQueryTableName);
+        $job = $this->bigQuery->loadFromJson(
+            $json, $bigQueryTableName, $bqColumns, $autoUpdateSchema
+        );
 
         // This is the first job, waits for a first success to continue
         if (! $this->currentJob) {
