@@ -1,13 +1,17 @@
 {
-    "name": "memeddev/mysql-to-google-bigquery",
-    "description": "MySQL to Google BigQuery Sync Tool",
+    "name": "phuongnguyentqn/mysql-to-google-bigquery",
+    "description": "MySQL to Google BigQuery Sync Tool. A forked version of https://github.com/MemedDev/mysql-to-google-bigquery",
     "keywords": ["mysql","google","bigquery","sync","data","load","send","tool"],
-    "homepage": "http://github.com/memeddev/mysql-to-google-bigquery",
+    "homepage": "https://github.com/phuongnguyentqn/mysql-to-google-bigquery",
     "license": "MIT",
     "authors": [
         {
             "name": "Memed SA",
             "email": "contato@memed.com.br"
+        },
+        {
+            "name": "Phuong Nguyen",
+            "email": ""
         }
     ],
     "require": {
