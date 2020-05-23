@@ -10,12 +10,11 @@ class BigQuery
     protected $tablesMetadata = [];
 
     /**
-     * Create a BigQuery Table based on MySQL Table columns
-     * @param  string $tableName           Table Name
-     * @param  array  $mysqlTableColumns   Array of Doctrine\DBAL\Schema\Column
-     * @return Google\Cloud\BigQuery\Table Table object
+     * Create BQ schema from MySql table
+     * @param array $mysqlTableColumns  Array of Doctrine\DBAL\Schema\Column
+     * @return array $bigqueryColumns   BQ columns
      */
-    public function createTable($tableName, $mysqlTableColumns)
+    public function getBQColumns($mysqlTableColumns)
     {
         $bigQueryColumns = [];
 
@@ -78,6 +77,18 @@ class BigQuery
                 'type' => $type
             ];
         }
+        return $bigQueryColumns;
+    }
+
+    /**
+     * Create a BigQuery Table based on MySQL Table columns
+     * @param  string $tableName           Table Name
+     * @param  array  $mysqlTableColumns   Array of Doctrine\DBAL\Schema\Column
+     * @return Google\Cloud\BigQuery\Table Table object
+     */
+    public function createTable($tableName, $mysqlTableColumns)
+    {
+        $bigQueryColumns = $this->getBQColumns($mysqlTableColumns);
 
         $client = $this->getClient();
         $dataset = $client->dataset($_ENV['BQ_DATASET']);
@@ -228,22 +239,27 @@ class BigQuery
      * Load data to BigQuery reading it from JSON NEWLINE DELIMITED File
      * @param  resource|string $file                Resource or String (path) of JSON file
      * @param  string          $tableName           Table Name
+     * @param  array           $bqColumns           BQ schema
+     * @param  bool            $autoUpdateSchema    Apply new BQ schema to the current table
      * @return Google\Cloud\BigQuery\Job            BigQuery Data Load Job
      */
-    public function loadFromJson($file, $tableName)
+    public function loadFromJson($file, $tableName, $bqColumns, $autoUpdateSchema)
     {
         $client = $this->getClient();
         $dataset = $client->dataset($_ENV['BQ_DATASET']);
         $table = $dataset->table($tableName);
-
-        $job = $table->load(
-            $file,
-            [
-                'jobConfig' => [
-                    'sourceFormat' => 'NEWLINE_DELIMITED_JSON'
-                ]
+        $jobConfig = [
+            'jobConfig' => [
+                'sourceFormat' => 'NEWLINE_DELIMITED_JSON',
             ]
-        );
+        ];
+        if ($autoUpdateSchema) {
+            $jobConfig['jobConfig']['schema'] = ['fields' => $bqColumns];
+            $jobConfig['jobConfig']['autodetect'] = true;
+            $jobConfig['jobConfig']['schemaUpdateOptions'] = ['ALLOW_FIELD_ADDITION'];
+        }
+
+        $job = $table->load($file, $jobConfig);
 
         return $job;
     }

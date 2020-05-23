@@ -23,6 +23,13 @@ class SyncCommand extends Command
             ->addOption('create-table', 'c', InputOption::VALUE_NONE, 'If BigQuery table doesn\'t exist, create it')
             ->addOption('delete-table', 'd', InputOption::VALUE_NONE, 'Delete the BigQuery table before syncing')
             ->addOption(
+                'auto-update-schema',
+                'a',
+                InputOption::VALUE_OPTIONAL,
+                'Automatically detect schema changes in mysql table and add them into BQ schema',
+                true
+            )
+            ->addOption(
                 'order-column',
                 'o',
                 InputOption::VALUE_OPTIONAL,
@@ -76,6 +83,7 @@ class SyncCommand extends Command
             $bigQueryTableName,
             $input->getOption('create-table'),
             $input->getOption('delete-table'),
+            $input->getOption('auto-update-schema'),
             $orderColumn,
             $ignoreColumns,
             $output
